@@ -46,6 +46,22 @@ function create_dialog([System.String]$title, [System.String]$msg){
 	return $x
 }
 
+#Modify NewRelic.cmd
+function update_newrelic_cmd_file([System.__ComObject] $project, [System.String]$lookFor, [System.String]$replacement){
+	
+	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
+
+	if($replacement -ne $null -and $replacement.Length -gt 0){
+		$newrelicCmdFile = $newrelicCmd.Properties.Item("FullPath").Value
+		$fileContent =  Get-Content $newrelicCmdFile | Foreach-Object {$_ -replace $lookFor, $replacement}
+		Set-Content -Value $fileContent -Path $newrelicCmdFile
+	}
+	else{
+		Write-Host "No value was provided, please make sure to edit the newrelic.cmd file and replace $lookFor with a valid value"
+	}	
+
+}
+
 #Modify NewRelic.msi and NewRelic.cmd so that they will be copy always
 function update_newrelic_project_items([System.__ComObject] $project, [System.String]$msi){
 	$newrelicMsi = $project.ProjectItems.Item($msi)
@@ -59,14 +75,7 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	#Modify NewRelic.cmd to accept the user's license key input 
 	$licenseKey = create_dialog "License Key" "Please enter in your New Relic LICENSE KEY"
 
-	if($licenseKey -ne $null -and $licenseKey.Length -gt 0){
-		$newrelicCmdFile = $newrelicCmd.Properties.Item("FullPath").Value
-		$fileContent =  Get-Content $newrelicCmdFile | Foreach-Object {$_ -replace 'REPLACE_WITH_LICENSE_KEY', $licenseKey}
-		Set-Content -Value $fileContent -Path $newrelicCmdFile
-	}
-	else{
-		Write-Host "No Key was provided, please make sure to edit the newrelic.cmd file and add a valid New Relic LICENSE KEY"
-	}	
+	update_newrelic_cmd_file $project "REPLACE_WITH_LICENSE_KEY" $licenseKey
 }
 
 #Modify the service config - adding a new Startup task to run the newrelic.cmd
@@ -153,6 +162,8 @@ function update_project_config([System.__ComObject] $project){
 	}
 	if($config -eq $null){
 		$config = $project.ProjectItems.Item("App.Config")
+		#We are instrumenting a worker role so we need the COR_ENABLE_PROFILING environment var set
+		update_newrelic_cmd_file $project "REM SETX COR_ENABLE_PROFILING 1 /M" "SETX COR_ENABLE_PROFILING 1 /M"
 	}
 	$configPath = $config.Properties.Item("LocalPath").Value
 	[xml] $configXml = gc $configPath
@@ -171,6 +182,12 @@ function update_project_config([System.__ComObject] $project){
 			$addSettingNode = $configXml.CreateElement('add')
 			$addSettingNode.SetAttribute('key','NewRelic.AppName')
 			set_newrelic_appname_config_node $addSettingNode $project.Name.ToString()
+			
+			if($configXml.configuration.appSettings -eq $null){
+				$addAppSettingsNode = $configXml.CreateElement('appSettings')
+				$configXml.configuration.appendchild($addAppSettingsNode)
+			}
+			
 			$configXml.configuration["appSettings"].appendchild($addSettingNode)
 		}
 		
