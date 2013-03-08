@@ -80,12 +80,14 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 
 #Modify the service config - adding a new Startup task to run the newrelic.cmd
 function update_azure_service_config([System.__ComObject] $project){
-	$svcConfigFile = $DTE.Solution.Projects|Select-Object -Expand ProjectItems|Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
+	$svcConfigFile = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	
 	if($svcConfigFile -eq $null){
 		Write-Host "Unable to find the ServiceDefinition.csdef file in your solution, please make sure your solution contains an Azure deployment project and try again."
 		return
 	}
+	
+	$svcConfigFile = $svcConfigFile[0]
 	
 	$ServiceDefinitionConfig = $svcConfigFile.Properties.Item("FullPath").Value
 	if(!(Test-Path $ServiceDefinitionConfig)) {
