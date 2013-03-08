@@ -80,67 +80,67 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 
 #Modify the service config - adding a new Startup task to run the newrelic.cmd
 function update_azure_service_config([System.__ComObject] $project){
-	$svcConfigFile = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
+	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	
-	if($svcConfigFile -eq $null){
+	if($svcConfigFiles -eq $null){
 		Write-Host "Unable to find the ServiceDefinition.csdef file in your solution, please make sure your solution contains an Azure deployment project and try again."
 		return
 	}
 	
-	$svcConfigFile = $svcConfigFile[0]
-	
-	$ServiceDefinitionConfig = $svcConfigFile.Properties.Item("FullPath").Value
-	if(!(Test-Path $ServiceDefinitionConfig)) {
-		Write-Host "Unable to locate the ServiceDefinition.csdef file on your filesystem.  Please verify that the ServiceDefinition.csdef in your solution points to a valid file and try again."
-		return
-	}
-	
-	[xml] $xml = gc $ServiceDefinitionConfig
-
-	#Create startup and newrelic task nodes
-	$startupNode = $xml.CreateElement('Startup','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-	$taskNode = $xml.CreateElement('Task','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-	$environmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-	$variableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-	$roleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-	
-	$roleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/Deployment/@emulated')
-	$variableNode.SetAttribute('name','EMULATED')
-	
-	$variableNode.AppendChild($roleInstanceValueNode)
-	$environmentNode.AppendChild($variableNode)
-	
-	
-	$taskNode.SetAttribute('commandLine','newrelic.cmd')
-	$taskNode.SetAttribute('executionContext','elevated')
-	$taskNode.SetAttribute('taskType','simple')
-	$taskNode.AppendChild($environmentNode)
-	
-	$startupNode.AppendChild($taskNode)
-
-	foreach($i in $xml.ServiceDefinition.ChildNodes){
-		if($i.name -eq $project.Name.ToString()){
-			$modified = $i
-			break
+	foreach ($svcConfigFile in $svcConfigFiles) {
+		$ServiceDefinitionConfig = $svcConfigFile.Properties.Item("FullPath").Value
+		if(!(Test-Path $ServiceDefinitionConfig)) {
+			Write-Host "Unable to locate the ServiceDefinition.csdef file on your filesystem.  Please verify that the ServiceDefinition.csdef in your solution points to a valid file and try again."
+			return
 		}
-	}
+		
+		[xml] $xml = gc $ServiceDefinitionConfig
 
-	$modifiedStartUp = $modified.StartUp
-	if($modifiedStartUp -eq $null){
-		$modified.PrependChild($startupNode)
-	}
-	else{
-		$nodeExists = $false
-		foreach ($i in $modifiedStartUp.Task){
-			if ($i.commandLine -eq "newrelic.cmd"){
-				$nodeExists = $true
+		#Create startup and newrelic task nodes
+		$startupNode = $xml.CreateElement('Startup','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+		$taskNode = $xml.CreateElement('Task','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+		$environmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+		$variableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+		$roleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+		
+		$roleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/Deployment/@emulated')
+		$variableNode.SetAttribute('name','EMULATED')
+		
+		$variableNode.AppendChild($roleInstanceValueNode)
+		$environmentNode.AppendChild($variableNode)
+		
+		
+		$taskNode.SetAttribute('commandLine','newrelic.cmd')
+		$taskNode.SetAttribute('executionContext','elevated')
+		$taskNode.SetAttribute('taskType','simple')
+		$taskNode.AppendChild($environmentNode)
+		
+		$startupNode.AppendChild($taskNode)
+
+		foreach($i in $xml.ServiceDefinition.ChildNodes){
+			if($i.name -eq $project.Name.ToString()){
+				$modified = $i
+				break
 			}
 		}
-		if($NewRelicTask -eq $null -and !$nodeExists){
-			$modifiedStartUp.AppendChild($taskNode)
+
+		$modifiedStartUp = $modified.StartUp
+		if($modifiedStartUp -eq $null){
+			$modified.PrependChild($startupNode)
 		}
+		else{
+			$nodeExists = $false
+			foreach ($i in $modifiedStartUp.Task){
+				if ($i.commandLine -eq "newrelic.cmd"){
+					$nodeExists = $true
+				}
+			}
+			if($NewRelicTask -eq $null -and !$nodeExists){
+				$modifiedStartUp.AppendChild($taskNode)
+			}
+		}
+		$xml.Save($ServiceDefinitionConfig);
 	}
-	$xml.Save($ServiceDefinitionConfig);
 }
 
 # Depending on how many worker roles / web roles there are in this project 
@@ -205,34 +205,36 @@ function update_project_config([System.__ComObject] $project){
 
 #Modify the service config - removing the Startup task to run the newrelic.cmd
 function cleanup_azure_service_config([System.__ComObject] $project){
-	$svcConfigFile = $DTE.Solution.Projects|Select-Object -Expand ProjectItems|Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
-	if($svcConfigFile -eq $null){
+	$svcConfigFiles = $DTE.Solution.Projects|Select-Object -Expand ProjectItems|Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
+	if($svcConfigFiles -eq $null){
 		return
 	}
 	
-	$ServiceDefinitionConfig = $svcConfigFile.Properties.Item("FullPath").Value
-	if(!(Test-Path $ServiceDefinitionConfig)) {
-		return
-	}
-	
-	[xml] $xml = gc $ServiceDefinitionConfig
-
-	foreach($i in $xml.ServiceDefinition.ChildNodes){
-		if($i.name -eq $project.Name.ToString()){
-			$modified = $i
-			break
+	foreach ($svcConfigFile in $svcConfigFiles) {
+		$ServiceDefinitionConfig = $svcConfigFile.Properties.Item("FullPath").Value
+		if(!(Test-Path $ServiceDefinitionConfig)) {
+			return
 		}
-	}
+		
+		[xml] $xml = gc $ServiceDefinitionConfig
 
-	$startupnode = $modified.Startup
-	if($startupnode.ChildNodes.Count -gt 0){
-		$node = $startupnode.Task | where { $_.commandLine -eq "newrelic.cmd" }
-		if($node -ne $null){
-			[Void]$node.ParentNode.RemoveChild($node)
-			if($startupnode.ChildNodes.Count -eq 0){
-				[Void]$startupnode.ParentNode.RemoveChild($startupnode)
+		foreach($i in $xml.ServiceDefinition.ChildNodes){
+			if($i.name -eq $project.Name.ToString()){
+				$modified = $i
+				break
 			}
-			$xml.Save($ServiceDefinitionConfig)
+		}
+
+		$startupnode = $modified.Startup
+		if($startupnode.ChildNodes.Count -gt 0){
+			$node = $startupnode.Task | where { $_.commandLine -eq "newrelic.cmd" }
+			if($node -ne $null){
+				[Void]$node.ParentNode.RemoveChild($node)
+				if($startupnode.ChildNodes.Count -eq 0){
+					[Void]$startupnode.ParentNode.RemoveChild($startupnode)
+				}
+				$xml.Save($ServiceDefinitionConfig)
+			}
 		}
 	}
 }

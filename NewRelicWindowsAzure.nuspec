@@ -26,9 +26,7 @@ For more information on what this package is doing go to: https://support.newrel
         <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
         <releaseNotes>Agent changes : https://newrelic.com/docs/releases/dotnet
 Package changes: 
- - https://github.com/newrelic/nuget-azure-cloud-services/issues/6
- - https://github.com/newrelic/nuget-azure-cloud-services/issues/3
- - https://github.com/newrelic/nuget-azure-cloud-services/issues/2</releaseNotes>
+ - https://github.com/newrelic/nuget-azure-cloud-services/issues/9</releaseNotes>
     </metadata>
     <files>
         <file src="content\net20\newrelic.cmd" target="content\net20\newrelic.cmd" />
