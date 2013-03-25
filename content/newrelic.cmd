@@ -1,5 +1,5 @@
 REM Update this variable to the current installer name.
-SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.1.2.472.msi
+SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.5.112.0.msi
 
 REM Update with your license key
 SET LICENSE_KEY=REPLACE_WITH_LICENSE_KEY
@@ -10,6 +10,9 @@ if defined NEWRELIC_HOME GOTO NR_ALREADY_INSTALLED
 if defined COR_ENABLE_PROFILING GOTO PROFILER_ALREADY_ENABLED
 if NOT exist %NR_INSTALLER_NAME% GOTO MISSING_INSTALLER
     
+SET LOG_DIR = d:\nr.log
+if "%EMULATED%"=="true" SET LOG_DIR = c:\nr.log
+
 REM Run the agent installer
 %NR_INSTALLER_NAME% /quiet NR_LICENSE_KEY=%LICENSE_KEY% >> d:\nr.log
 
@@ -42,5 +45,6 @@ GOTO END
 :NR_ALREADY_INSTALLED
 ECHO NEWRELIC_HOME is already defined.  Skipping the New Relic Agent installation. >> d:\nr.log
 GOTO END
+
 
 :END

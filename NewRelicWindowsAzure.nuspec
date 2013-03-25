@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>NewRelicWindowsAzure</id>
-        <version>2.1.2.472</version>
+        <version>2.5.112.0</version>
         <title>New Relic x64 for Windows Azure</title>
         <authors>Mike Cousins,Nick Floyd</authors>
         <owners />
@@ -26,15 +26,12 @@ For more information on what this package is doing go to: https://support.newrel
         <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
         <releaseNotes>Agent changes : https://newrelic.com/docs/releases/dotnet
 Package changes: 
- - https://github.com/newrelic/nuget-azure-cloud-services/issues/9</releaseNotes>
+- updates msi version and libs</releaseNotes>
     </metadata>
     <files>
-        <file src="content\net20\newrelic.cmd" target="content\net20\newrelic.cmd" />
-        <file src="content\net20\NewRelicAgent_x64_2.1.2.472.msi" target="content\net20\NewRelicAgent_x64_2.1.2.472.msi" />
-        <file src="content\net40\newrelic.cmd" target="content\net40\newrelic.cmd" />
-        <file src="content\net40\NewRelicAgent_x64_2.1.2.472.msi" target="content\net40\NewRelicAgent_x64_2.1.2.472.msi" />
-        <file src="lib\net20\NewRelic.Api.Agent.dll" target="lib\net20\NewRelic.Api.Agent.dll" />
-        <file src="lib\net40\NewRelic.Api.Agent.dll" target="lib\net40\NewRelic.Api.Agent.dll" />
+        <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
+        <file src="content\NewRelicAgent_x64_2.5.112.0.msi" target="content\NewRelicAgent_x64_2.5.112.0.msi" />
+        <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
         <file src="tools\install.ps1" target="tools\install.ps1" />
         <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
         <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
