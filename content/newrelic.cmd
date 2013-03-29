@@ -1,50 +1,53 @@
-REM Update this variable to the current installer name.
-SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.5.112.0.msi
-
-REM Update with your license key
-SET LICENSE_KEY=REPLACE_WITH_LICENSE_KEY
-
 SETLOCAL EnableExtensions
 
-if defined NEWRELIC_HOME GOTO NR_ALREADY_INSTALLED
-if defined COR_ENABLE_PROFILING GOTO PROFILER_ALREADY_ENABLED
-if NOT exist %NR_INSTALLER_NAME% GOTO MISSING_INSTALLER
-    
-SET LOG_DIR = d:\nr.log
-if "%EMULATED%"=="true" SET LOG_DIR = c:\nr.log
+for /F "usebackq tokens=1,2 delims==" %%i in (`wmic os get LocalDateTime /VALUE 2^>NUL`) do if '.%%i.'=='.LocalDateTime.' set ldt=%%j
+set ldt=%ldt:~0,4%-%ldt:~4,2%-%ldt:~6,2% %ldt:~8,2%:%ldt:~10,2%:%ldt:~12,6%
 
-REM Run the agent installer
-%NR_INSTALLER_NAME% /quiet NR_LICENSE_KEY=%LICENSE_KEY% >> d:\nr.log
+IF EXIST "%RoleRoot%\nr.log" (
+    ECHO %ldt% : The New Relic .net Agent is already installed. Exiting. >> "%RoleRoot%\nr.log" 2>&1
+    GOTO :EXIT
+)
 
-REM Get the NEWRELIC_HOME environment variable value and set it in NR_HOME
-FOR /F "skip=2 tokens=3*" %%A IN ('REG QUERY "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v NEWRELIC_HOME 2^>nul') DO SET NR_HOME="%%A %%B"
+ECHO %ldt% : Begin installing the New Relic .net Agent >> "%RoleRoot%\nr.log" 2>&1
 
-REM Uncomment the line below if you want to copy a custom newrelic.xml file into your instance
-REM copy /Y newrelic.xml %NR_HOME% >> d:\nr.log
+:: Update with your license key
+SET LICENSE_KEY=65cef43eb702036e5810aed3ed1d2ab117409b71
+:: Current version of the installer
+SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.5.112.0.msi
+:: Path used for custom configuration and worker role environment varibles
+SET NR_HOME=%ALLUSERSPROFILE%\New Relic\.NET Agent\
 
-REM Uncomment the line below to copy custom instrumentation into the agent directory.
-REM copy /y CustomInstrumentation.xml %NR_HOME%\extensions >> d:\nr.log
+ECHO Installing the New Relic .net Agent. >> "%RoleRoot%\nr.log" 2>&1
+msiexec.exe /i %NR_INSTALLER_NAME% /norestart /quiet NR_LICENSE_KEY=%LICENSE_KEY% /lv* %RoleRoot%\nr_install.log
 
-REM Uncomment the line below to get instrumentation for worker roles and / or not IIS based .net applications
-REM SETX COR_ENABLE_PROFILING 1 /M
+:: CUSTOM newrelic.xml : Uncomment the line below if you want to copy a custom newrelic.xml file into your instance
+REM copy /Y newrelic.xml %NR_HOME% >> %RoleRoot%\nr.log
 
-REM Restart the instance.  The worker process will be instrumented the next time it starts. if emulated then this step will not run
-if "%EMULATED%"=="true" goto :EOF
-SHUTDOWN /r /c "Reboot after installing the New Relic .NET Agent" /t 0
+:: CUSTOM INSTRUMENTATION : Uncomment the line below to copy custom instrumentation into the agent directory.
+REM copy /y CustomInstrumentation.xml %NR_HOME%\extensions >> %RoleRoot%\nr.log
 
-GOTO END
+:: If we are in a Worker Role then there is no need to restart W3SVC
+if "%IsWorkerRole%" EQU "true" goto :FINALIZE
 
-:MISSING_INSTALLER
-ECHO Unable to find %NR_INSTALLER_NAME% >> d:\nr.log
-GOTO END
+:: If we are emulating locally then do not restart W3SVC
+if "%EMULATED%" EQU "true" goto :FINALIZE
 
-:PROFILER_ALREADY_ENABLED
-ECHO A profiler is already enabled.  Skipping the New Relic Agent installation. >> d:\nr.log
-GOTO END
+:: WEB ROLES : Restart the service to pick up the new environment variables
+ECHO Restarting IIS and W3SVC to pick up the new environment variables >> "%RoleRoot%\nr.log" 2>&1
+IISRESET
+NET START W3SVC
 
-:NR_ALREADY_INSTALLED
-ECHO NEWRELIC_HOME is already defined.  Skipping the New Relic Agent installation. >> d:\nr.log
-GOTO END
+:FINALIZE
+IF %ERRORLEVEL% EQU 0 (
+  REM  The New Relic .net Agent installed ok and does not need to be installed again.
+  ECHO New Relic .net Agent was installed successfully. >> "%RoleRoot%\nr.log" 2>&1
 
+) ELSE (
+  REM   An error occurred. Log the error to a separate log and exit with the error code.
+  ECHO  An error occurred installing the New Relic .net Agent 1. Errorlevel = %ERRORLEVEL%. >> "%RoleRoot%\nr_error.log" 2>&1
 
-:END
+  EXIT %ERRORLEVEL%
+)
+
+:EXIT
+EXIT /B 0

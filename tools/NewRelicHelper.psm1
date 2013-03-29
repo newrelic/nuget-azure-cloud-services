@@ -96,49 +96,90 @@ function update_azure_service_config([System.__ComObject] $project){
 		
 		[xml] $xml = gc $ServiceDefinitionConfig
 
-		#Create startup and newrelic task nodes
-		$startupNode = $xml.CreateElement('Startup','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-		$taskNode = $xml.CreateElement('Task','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-		$environmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-		$variableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-		$roleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-		
-		$roleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/Deployment/@emulated')
-		$variableNode.SetAttribute('name','EMULATED')
-		
-		$variableNode.AppendChild($roleInstanceValueNode)
-		$environmentNode.AppendChild($variableNode)
-		
-		
-		$taskNode.SetAttribute('commandLine','newrelic.cmd')
-		$taskNode.SetAttribute('executionContext','elevated')
-		$taskNode.SetAttribute('taskType','simple')
-		$taskNode.AppendChild($environmentNode)
-		
-		$startupNode.AppendChild($taskNode)
+		$isWorkerRole = 'false'
 
-		foreach($i in $xml.ServiceDefinition.ChildNodes){
-			if($i.name -eq $project.Name.ToString()){
-				$modified = $i
-				break
-			}
-		}
-
-		$modifiedStartUp = $modified.StartUp
-		if($modifiedStartUp -eq $null){
-			$modified.PrependChild($startupNode)
-		}
-		else{
-			$nodeExists = $false
-			foreach ($i in $modifiedStartUp.Task){
-				if ($i.commandLine -eq "newrelic.cmd"){
-					$nodeExists = $true
-				}
-			}
-			if($NewRelicTask -eq $null -and !$nodeExists){
-				$modifiedStartUp.AppendChild($taskNode)
-			}
-		}
+        #Create startup and newrelic task nodes
+        $startupNode = $xml.CreateElement('Startup','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $taskNode = $xml.CreateElement('Task','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $environmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $variableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $roleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        
+        $roleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/Deployment/@emulated')
+        $variableNode.SetAttribute('name','EMULATED')
+        
+        $variableNode.AppendChild($roleInstanceValueNode)
+        $environmentNode.AppendChild($variableNode)
+        
+        $taskNode.SetAttribute('commandLine','newrelic.cmd')
+        $taskNode.SetAttribute('executionContext','elevated')
+        $taskNode.SetAttribute('taskType','simple')
+        
+        foreach($i in $xml.ServiceDefinition.ChildNodes){
+        	if($i.name -eq $project.Name.ToString()){
+        		$modified = $i
+        		if($modified.LocalName -eq 'WorkerRole'){
+        		    $isWorkerRole = 'true'
+        		}
+        		break
+        	}
+        }
+        
+        #Generate the variable for the startup task that will be used to check to see if we need to issue a restart on the W3SVC 
+        $variableIsWorkerRoleNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $variableIsWorkerRoleNode.SetAttribute('name','IsWorkerRole')
+        $variableIsWorkerRoleNode.SetAttribute('value',$isWorkerRole)
+        $environmentNode.AppendChild($variableIsWorkerRoleNode)
+        
+        $taskNode.AppendChild($environmentNode)
+        $startupNode.AppendChild($taskNode)
+        
+        $modifiedStartUp = $modified.StartUp
+        if($modifiedStartUp -eq $null){
+        	$modified.PrependChild($startupNode)
+        }
+        else{
+        	$nodeExists = $false
+        	foreach ($i in $modifiedStartUp.Task){
+        		if ($i.commandLine -eq "newrelic.cmd"){
+        			$nodeExists = $true
+        		}
+        	}
+        	if($NewRelicTask -eq $null -and !$nodeExists){
+        		$modifiedStartUp.AppendChild($taskNode)
+        	}
+        }
+        
+        if($modified -ne $null -and $isWorkerRole -eq 'true'){
+        
+        	#Generate the environment variables for worker role instrumentation
+        	$runtimeNode = $xml.CreateElement('Runtime','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	$runtimeEnvironmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	
+        	$variableCEPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	$variableCEPNode.SetAttribute('name','COR_ENABLE_PROFILING')
+        	$variableCEPNode.SetAttribute('value','1')
+        	
+        	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	$variableCPNode.SetAttribute('name','COR_PROFILER')
+        	$variableCPNode.SetAttribute('value','{FF68FEB9-E58A-4B75-A2B8-90CE7D915A26}')
+        	
+        	#Not needed for .net 4.0 and greater apps and will be ignored on Azure
+        	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	$variableNHNode.SetAttribute('name','NEWRELIC_HOME')
+            $variableNHNode.SetAttribute('value','D:\ProgramData\New Relic\.NET Agent\')
+        	
+        	$runtimeEnvironmentNode.AppendChild($variableCEPNode)
+        	$runtimeEnvironmentNode.AppendChild($variableCPNode)
+        	$runtimeEnvironmentNode.AppendChild($variableNHNode)
+        	$runtimeNode.AppendChild($runtimeEnvironmentNode)
+        
+        	$modifiedRuntime = $modified.Runtime
+        	if($modifiedRuntime -eq $null){
+        		$modified.PrependChild($runtimeNode)
+        	}
+        }
+		
 		$xml.Save($ServiceDefinitionConfig);
 	}
 }
@@ -263,11 +304,15 @@ function cleanup_project_config([System.__ComObject] $project){
 	}
 	
 	# manually remove newrelic.cmd since the Nuget uninstaller won't due to it being "modified"
-	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
-	if ($newrelicCmd -ne $null) {
-		$newrelicCmdPath = $newrelicCmdPath.Properties.Item("LocalPath").Value
-		if (Test-Path $newrelicCmdPath) {
-			Remove-Item $newrelicCmdPath
+	Try{
+		$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
+		if ($newrelicCmd -ne $null) {
+			$newrelicCmdPath = $newrelicCmdPath.Properties.Item("LocalPath").Value
+			if (Test-Path $newrelicCmdPath) {
+				Remove-Item $newrelicCmdPath
+			}
 		}
+	}Catch{
+		#Swallow - file has been removed
 	}
 }
