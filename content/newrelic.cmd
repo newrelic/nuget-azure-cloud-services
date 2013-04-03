@@ -11,7 +11,7 @@ IF EXIST "%RoleRoot%\nr.log" (
 ECHO %ldt% : Begin installing the New Relic .net Agent >> "%RoleRoot%\nr.log" 2>&1
 
 :: Update with your license key
-SET LICENSE_KEY=65cef43eb702036e5810aed3ed1d2ab117409b71
+SET LICENSE_KEY=REPLACE_WITH_LICENSE_KEY
 :: Current version of the installer
 SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.5.112.0.msi
 :: Path used for custom configuration and worker role environment varibles
