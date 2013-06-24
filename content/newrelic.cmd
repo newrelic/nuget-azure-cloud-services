@@ -13,7 +13,7 @@ ECHO %ldt% : Begin installing the New Relic .net Agent >> "%RoleRoot%\nr.log" 2>
 :: Update with your license key
 SET LICENSE_KEY=REPLACE_WITH_LICENSE_KEY
 :: Current version of the installer
-SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.5.112.0.msi
+SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.8.135.0.msi
 :: Path used for custom configuration and worker role environment varibles
 SET NR_HOME=%ALLUSERSPROFILE%\New Relic\.NET Agent\
 

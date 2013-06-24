@@ -305,13 +305,19 @@ function cleanup_project_config([System.__ComObject] $project){
 	
 	# manually remove newrelic.cmd since the Nuget uninstaller won't due to it being "modified"
 	Try{
-		$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
-		if ($newrelicCmd -ne $null) {
-			$newrelicCmdPath = $newrelicCmdPath.Properties.Item("LocalPath").Value
-			if (Test-Path $newrelicCmdPath) {
-				Remove-Item $newrelicCmdPath
-			}
+		$scripts = $project.ProjectItems | Where-Object { $_.Name -eq "newrelic.cmd" }
+
+		if ($scripts) {
+			$scripts.ProjectItems | ForEach-Object { $_.Delete() }
 		}
+	
+#		$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
+#		if ($newrelicCmd -ne $null) {
+#			$newrelicCmdPath = $newrelicCmdPath.Properties.Item("LocalPath").Value
+#			if (Test-Path $newrelicCmdPath) {
+#				Remove-Item $newrelicCmdPath
+#			}
+#		}
 	}Catch{
 		#Swallow - file has been removed
 	}
