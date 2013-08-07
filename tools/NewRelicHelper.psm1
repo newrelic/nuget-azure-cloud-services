@@ -162,7 +162,7 @@ function update_azure_service_config([System.__ComObject] $project){
         	
         	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$variableCPNode.SetAttribute('name','COR_PROFILER')
-        	$variableCPNode.SetAttribute('value','{FF68FEB9-E58A-4B75-A2B8-90CE7D915A26}')
+        	$variableCPNode.SetAttribute('value','{71DA0A04-7777-4EC6-9643-7D28B46A8A41}')
         	
         	#Not needed for .net 4.0 and greater apps and will be ignored on Azure
         	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
