@@ -7,6 +7,7 @@ function create_dialog([System.String]$title, [System.String]$msg){
 	$objForm.Text = $title
 	$objForm.Size = New-Object System.Drawing.Size(300,200) 
 	$objForm.StartPosition = "CenterScreen"
+	$objForm.FormBorderStyle = "FixedDialog"
 
 	$objForm.KeyPreview = $True
 	$objForm.Add_KeyDown({if ($_.KeyCode -eq "Enter") 
@@ -73,7 +74,7 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	$copyToOutputCmd.Value = 1
 	
 	#Modify NewRelic.cmd to accept the user's license key input 
-	$licenseKey = create_dialog "License Key" "Please enter in your New Relic LICENSE KEY"
+	$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
 
 	update_newrelic_cmd_file $project "REPLACE_WITH_LICENSE_KEY" $licenseKey
 }
@@ -162,7 +163,7 @@ function update_azure_service_config([System.__ComObject] $project){
         	
         	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$variableCPNode.SetAttribute('name','COR_PROFILER')
-        	$variableCPNode.SetAttribute('value','{FF68FEB9-E58A-4B75-A2B8-90CE7D915A26}')
+        	$variableCPNode.SetAttribute('value','{71DA0A04-7777-4EC6-9643-7D28B46A8A41}')
         	
         	#Not needed for .net 4.0 and greater apps and will be ignored on Azure
         	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
@@ -188,7 +189,7 @@ function update_azure_service_config([System.__ComObject] $project){
 # we will use this value for the config key NewRelic.AppName
 # Prompt use to enter a name then >> Solution name >> more than one role we will attempt to use worker role name
 function set_newrelic_appname_config_node([System.Xml.XmlElement]$node, [System.String]$pn){
-	$appName = create_dialog "NewRelic.AppName" "Please enter in the value you would like for the NewRelic.AppName AppSetting for the project named $pn (optional, if none is provided we will use the solution name)"
+	$appName = create_dialog "NewRelic.AppName" "Please enter the value you would like for the NewRelic.AppName AppSetting for the project named $pn (optional, if none is provided we will use the solution name)"
 	if($node -ne $null){
 		if($appName -ne $null -and $appName.Length -gt 0){
 			$node.SetAttribute('value',$appName)
