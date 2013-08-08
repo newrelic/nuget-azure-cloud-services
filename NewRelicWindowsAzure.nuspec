@@ -1,15 +1,15 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
-    <metadata>
-        <id>NewRelicWindowsAzure</id>
-        <version>2.8.135.0</version>
-        <title>New Relic x64 for Windows Azure</title>
-        <authors>Mike Cousins,Nick Floyd</authors>
-        <licenseUrl>http://newrelic.com</licenseUrl>
-        <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget/</projectUrl>
-        <iconUrl>http://newrelic.com/images/avatar-newrelic.png</iconUrl>
-        <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>Make sure you go to New Relic first to sign up and get your key at http://newrelic.com. Performance monitoring will never be the same after you do!  
+  <metadata>
+    <id>NewRelicWindowsAzure</id>
+    <version>2.9.122.0</version>
+    <title>New Relic x64 for Windows Azure</title>
+    <authors>Mike Cousins,Nick Floyd</authors>
+    <licenseUrl>http://newrelic.com</licenseUrl>
+    <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget/</projectUrl>
+    <iconUrl>http://newrelic.com/images/avatar-newrelic.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Make sure you go to New Relic first to sign up and get your key at http://newrelic.com. Performance monitoring will never be the same after you do!  
             The package is available through your NuGet package manager and on the web at http://nuget.org/packages/NewRelicWindowsAzure  
 
             Set up:  
@@ -21,15 +21,33 @@
             Visit http://rpm.newrelic.com after your package deploy is complete to see your performance metrics.  
 
             For more information on what this package is doing go to: https://support.newrelic.com/help/kb/dotnet/installing-the-net-agent-on-azure</description>
-        <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
-        <releaseNotes>Agent changes : https://newrelic.com/docs/releases/dotnet</releaseNotes>
-    </metadata>
-    <files>
-        <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
-        <file src="content\NewRelicAgent_x64_2.8.135.0.msi" target="content\NewRelicAgent_x64_2.8.135.0.msi" />
-        <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
-        <file src="tools\install.ps1" target="tools\install.ps1" />
-        <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
-        <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
-    </files>
+    <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
+    <releaseNotes>
+
+Fixes
+
+* Fixed a bug where external request timing was showing up on the call to WriteHeaders instead of on the Stream Read.  The Stream Read has been removed and WriteHeaders should correctly report as being fast.  In their place you will now see all the time occurring inside a call to Stream GetResponse.
+* The Original Url custom parameter will now contain the correct value if the application had re-written the Url in the BeginRequest event handler of an HttpModule.
+* Fixed an issue where sometimes our usage of Log4Net would conflict with the user's usage of Log4Net.
+* Fixed a bug in external request counting that would result in the counts being too high.
+* Fixes an issue on Windows 2003/IIS 6 server where the New Relic Status Monitor was showing no reporting applications and an incorrect error message about IIS being in a stopped state in some cases where apps hosted on the machine were in fact reporting to New Relic. 
+
+New Features
+
+* Added the ability to selectively include or exclude certain application pools from being monitored by New Relic.
+* Improved cold startup time for user applications instrumented by New Relic.
+
+Improvements
+
+* Improved error logging of API method calls.  If you call an API method at an invalid time or you supply invalid parameters a warning will be logged to the New Relic .NET Agent log file.
+* Changed startup logging location from the event log to log file on disk.</releaseNotes>
+  </metadata>
+  <files>
+    <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
+    <file src="content\NewRelicAgent_x64_2.9.122.0.msi" target="content\NewRelicAgent_x64_2.9.122.0.msi" />
+    <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
+    <file src="tools\install.ps1" target="tools\install.ps1" />
+    <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
+    <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
+  </files>
 </package>
