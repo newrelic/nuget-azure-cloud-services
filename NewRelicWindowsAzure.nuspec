@@ -6,7 +6,7 @@
     <title>New Relic x64 for Windows Azure</title>
     <authors>Mike Cousins,Nick Floyd</authors>
     <licenseUrl>http://newrelic.com</licenseUrl>
-    <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget/</projectUrl>
+    <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget</projectUrl>
     <iconUrl>http://newrelic.com/images/avatar-newrelic.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Make sure you go to New Relic first to sign up and get your key at http://newrelic.com. Performance monitoring will never be the same after you do!  
