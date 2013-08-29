@@ -212,8 +212,6 @@ function update_project_config([System.__ComObject] $project){
 	}
 	if($config -eq $null){
 		$config = $project.ProjectItems.Item("App.Config")
-		#We are instrumenting a worker role so we need the COR_ENABLE_PROFILING environment var set
-		update_newrelic_cmd_file $project "REM SETX COR_ENABLE_PROFILING 1 /M" "SETX COR_ENABLE_PROFILING 1 /M"
 	}
 	$configPath = $config.Properties.Item("LocalPath").Value
 	[xml] $configXml = gc $configPath
@@ -311,14 +309,6 @@ function cleanup_project_config([System.__ComObject] $project){
 		if ($scripts) {
 			$scripts.ProjectItems | ForEach-Object { $_.Delete() }
 		}
-	
-#		$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
-#		if ($newrelicCmd -ne $null) {
-#			$newrelicCmdPath = $newrelicCmdPath.Properties.Item("LocalPath").Value
-#			if (Test-Path $newrelicCmdPath) {
-#				Remove-Item $newrelicCmdPath
-#			}
-#		}
 	}Catch{
 		#Swallow - file has been removed
 	}
