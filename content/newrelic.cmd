@@ -3,11 +3,6 @@ SETLOCAL EnableExtensions
 for /F "usebackq tokens=1,2 delims==" %%i in (`wmic os get LocalDateTime /VALUE 2^>NUL`) do if '.%%i.'=='.LocalDateTime.' set ldt=%%j
 set ldt=%ldt:~0,4%-%ldt:~4,2%-%ldt:~6,2% %ldt:~8,2%:%ldt:~10,2%:%ldt:~12,6%
 
-IF EXIST "%RoleRoot%\nr.log" (
-    ECHO %ldt% : The New Relic .net Agent is already installed. Exiting. >> "%RoleRoot%\nr.log" 2>&1
-    GOTO :EXIT
-)
-
 ECHO %ldt% : Begin installing the New Relic .net Agent >> "%RoleRoot%\nr.log" 2>&1
 
 :: Update with your license key
@@ -18,7 +13,12 @@ SET NR_INSTALLER_NAME=NewRelicAgent_x64_2.10.40.0.msi
 SET NR_HOME=%ALLUSERSPROFILE%\New Relic\.NET Agent\
 
 ECHO Installing the New Relic .net Agent. >> "%RoleRoot%\nr.log" 2>&1
-msiexec.exe /i %NR_INSTALLER_NAME% /norestart /quiet NR_LICENSE_KEY=%LICENSE_KEY% /lv* %RoleRoot%\nr_install.log
+
+IF "%IsWorkerRole%" EQU "true" (
+    msiexec.exe /i %NR_INSTALLER_NAME% /norestart /quiet NR_LICENSE_KEY=%LICENSE_KEY% INSTALLLEVEL=50 /lv* %RoleRoot%\nr_install.log
+) ELSE (
+    msiexec.exe /i %NR_INSTALLER_NAME% /norestart /quiet NR_LICENSE_KEY=%LICENSE_KEY% /lv* %RoleRoot%\nr_install.log
+)
 
 :: CUSTOM newrelic.xml : Uncomment the line below if you want to copy a custom newrelic.xml file into your instance
 REM copy /Y newrelic.xml %NR_HOME% >> %RoleRoot%\nr.log
