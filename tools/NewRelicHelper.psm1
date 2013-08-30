@@ -75,7 +75,6 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	
 	#Modify NewRelic.cmd to accept the user's license key input 
 	$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
-
 	update_newrelic_cmd_file $project "REPLACE_WITH_LICENSE_KEY" $licenseKey
 }
 
@@ -121,6 +120,8 @@ function update_azure_service_config([System.__ComObject] $project){
         		$modified = $i
         		if($modified.LocalName -eq 'WorkerRole'){
         		    $isWorkerRole = 'true'
+        		    Write-Host "Azure Worker Role projects have no default concept of Web transactions or HTTP context so you'll need to use the Agent API (added as a reference to your project as part of this package) for your custom instrumentation needs."
+        		    Write-Host "Please visit https://newrelic.com/docs/dotnet/the-net-agent-api for more on the NewRelic.Api.Agent"
         		}
         		break
         	}
@@ -157,22 +158,30 @@ function update_azure_service_config([System.__ComObject] $project){
         	$runtimeNode = $xml.CreateElement('Runtime','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$runtimeEnvironmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	
+        	#Enables profiling for all CLR based applications
         	$variableCEPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$variableCEPNode.SetAttribute('name','COR_ENABLE_PROFILING')
         	$variableCEPNode.SetAttribute('value','1')
         	
+        	#Profiler guid associated with the New Relic .NET profiler
         	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$variableCPNode.SetAttribute('name','COR_PROFILER')
         	$variableCPNode.SetAttribute('value','{71DA0A04-7777-4EC6-9643-7D28B46A8A41}')
         	
-        	#Not needed for .net 4.0 and greater apps and will be ignored on Azure
+        	#Helps Azure Workers find the newrelic.config
         	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         	$variableNHNode.SetAttribute('name','NEWRELIC_HOME')
             $variableNHNode.SetAttribute('value','D:\ProgramData\New Relic\.NET Agent\')
-        	
+            
+            #Helps Azure Workers find the NewRelic.Agent.Core.dll
+        	$variableNIPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        	$variableNIPNode.SetAttribute('name','NEWRELIC_INSTALL_PATH')
+            $variableNIPNode.SetAttribute('value','D:\Program Files\New Relic\.NET Agent\')
+            
         	$runtimeEnvironmentNode.AppendChild($variableCEPNode)
         	$runtimeEnvironmentNode.AppendChild($variableCPNode)
         	$runtimeEnvironmentNode.AppendChild($variableNHNode)
+        	$runtimeEnvironmentNode.AppendChild($variableNIPNode)
         	$runtimeNode.AppendChild($runtimeEnvironmentNode)
         
         	$modifiedRuntime = $modified.Runtime
@@ -180,7 +189,7 @@ function update_azure_service_config([System.__ComObject] $project){
         		$modified.PrependChild($runtimeNode)
         	}
         }
-		
+        
 		$xml.Save($ServiceDefinitionConfig);
 	}
 }
@@ -206,13 +215,14 @@ function set_newrelic_appname_config_node([System.Xml.XmlElement]$node, [System.
 #Modify the [web|app].config so that we can use the project name instead of a static placeholder
 function update_project_config([System.__ComObject] $project){
 	Try{
-		$config = $project.ProjectItems.Item("Web.Config") #$DTE.Solution.FindProjectItem("Web.Config") #
+		$config = $project.ProjectItems.Item("Web.Config")
 	}Catch{
 		#Swallow - non webrole project 
 	}
 	if($config -eq $null){
 		$config = $project.ProjectItems.Item("App.Config")
 	}
+	
 	$configPath = $config.Properties.Item("LocalPath").Value
 	[xml] $configXml = gc $configPath
 
@@ -276,6 +286,20 @@ function cleanup_azure_service_config([System.__ComObject] $project){
 				$xml.Save($ServiceDefinitionConfig)
 			}
 		}
+		
+		$runtimeNode = $modified.Runtime
+        if($runtimeNode -ne $null -and $runtimeNode.ChildNodes.Count -gt 0){
+        	$variableNodes = $runtimeNode.Environment.Variable | where { $_.name -eq "COR_ENABLE_PROFILING" -or $_.name -eq "COR_PROFILER" -or $_.name -eq "NEWRELIC_HOME" -or $_.name -eq "NEWRELIC_INSTALL_PATH" }
+        	if($variableNodes -ne $null -and $variableNodes.Count -gt 0){
+        		foreach($varNode in $variableNodes){
+        			[Void]$varNode.ParentNode.RemoveChild($varNode)
+        		}
+        		if($runtimeNode.Environment.ChildNodes.Count -eq 0){
+        			[Void]$runtimeNode.ParentNode.RemoveChild($runtimeNode)
+        		}
+        		$xml.Save($ServiceDefinitionConfig)
+        	}
+        }
 	}
 }
 
