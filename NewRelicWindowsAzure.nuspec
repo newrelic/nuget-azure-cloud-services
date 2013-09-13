@@ -1,15 +1,15 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
-    <metadata>
-        <id>NewRelicWindowsAzure</id>
-        <version>2.10.40.1</version>
-        <title>New Relic x64 for Windows Azure</title>
-        <authors>Mike Cousins,Nick Floyd</authors>
-        <licenseUrl>http://newrelic.com</licenseUrl>
-        <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget</projectUrl>
-        <iconUrl>http://newrelic.com/images/avatar-newrelic.png</iconUrl>
-        <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>Make sure you go to New Relic first to sign up and get your key at http://newrelic.com. Performance monitoring will never be the same after you do!  
+  <metadata>
+    <id>NewRelicWindowsAzure</id>
+    <version>2.12.146.0</version>
+    <title>New Relic x64 for Windows Azure</title>
+    <authors>Mike Cousins,Nick Floyd</authors>
+    <licenseUrl>http://newrelic.com</licenseUrl>
+    <projectUrl>http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget</projectUrl>
+    <iconUrl>http://newrelic.com/images/avatar-newrelic.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Make sure you go to New Relic first to sign up and get your key at http://newrelic.com. Performance monitoring will never be the same after you do!  
             The package is available through your NuGet package manager and on the web at http://nuget.org/packages/NewRelicWindowsAzure  
 
             Set up:  
@@ -21,20 +21,33 @@
             Visit http://rpm.newrelic.com after your package deploy is complete to see your performance metrics.  
 
             For more information on what this package is doing go to: https://support.newrelic.com/help/kb/dotnet/installing-the-net-agent-on-azure</description>
-        <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
-        <releaseNotes>Improvements
+    <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
+    <releaseNotes>
 
-* Improved the naming of MVC transactions.  Naming to controller/action should be much more reliable now.
-* Improved WebAPI support.  You should now see Web Transactions grouped by [controller].[action] rather than all WebAPI transactions reporting as System.Web.Http.WebHost.HttpControllerHandler.
-* Fixed a bug whereby IIS applications with underscore characters in their names were not displayed correctly in the Status Monitor.
-* Fixed a bug whereby users could not view the log file for some IIS applications in the Status Monitor.</releaseNotes>
-    </metadata>
-    <files>
-        <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
-        <file src="content\NewRelicAgent_x64_2.10.40.0.msi" target="content\NewRelicAgent_x64_2.10.40.0.msi" />
-        <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
-        <file src="tools\install.ps1" target="tools\install.ps1" />
-        <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
-        <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
-    </files>
+Fixes
+
+* Fixes an issue where content-type was being explicitly checked for "text/HTML."  In some frameworks, such as NancyFX (http://nancyfx.org/), the charset was being added to the content-type before the New Relic HTTP module was loaded which caused the explicit check to fail and the RUM header and footer to not be added to the pages.
+* Fixes an issue when the application results in a status code 404 or greater the metrics would be reported for the page not found instead of recording metrics for the 404 itself.  This change also addresses an issue where assets such as png, css, js and so on would have metrics recorded for each individual asset instead of rolling them up into the appropriate asset group, such as *.png or *.css.  Finally there were other metric grouping issues fixed where metrics were being named the custom route (such as /products/1) on some applications instead of using the name of the code asset that was doing the work to create the page (such as /products/productstemplate.aspx).
+* Corrects functionality of the Status Monitor for IIS6 installations and applications running under sites other than DefaultWebSite. 
+
+New Features
+
+* A thread profiler has been added to the .NET agent. The thread profiler is a low-impact profiling tool that can be used in production to identify bottlenecks in an application.
+
+Improvements
+
+* Log files now have windows style line endings so they display correctly in notepad.exe.
+* The status monitor tray application will now prompt for elevation on launch rather than error at runtime when it doesn't have correct permissions.
+* Azure Cloud Services nuget package : Modified the package so that when installing a new version it will attempt an upgrade if an existing agent is installed. (This feature requires Nuget v.2.6+ which prompts the user to overwrite existing / modified files - the newrelic.cmd must be overwritten to apply the new commands on the cloud service)
+* Azure Cloud Services nuget package : The package now properly cleans up the environment variables out of the csdef when an uninstall or update occurs.
+* Azure Cloud Services nuget package : For Worker Roles, the msiexec command in the newrelic.cmd file as been changed so that when the agent is installed it will install it for all CLR based applications.</releaseNotes>
+  </metadata>
+  <files>
+    <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
+    <file src="content\NewRelicAgent_x64_2.12.146.0.msi" target="content\NewRelicAgent_x64_2.12.146.0.msi" />
+    <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
+    <file src="tools\install.ps1" target="tools\install.ps1" />
+    <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
+    <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
+  </files>
 </package>
