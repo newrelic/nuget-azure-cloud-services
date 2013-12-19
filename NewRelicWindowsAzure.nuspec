@@ -23,7 +23,11 @@
             For more information on what this package is doing go to: https://support.newrelic.com/help/kb/dotnet/installing-the-net-agent-on-azure</description>
     <summary>Includes the latest New Relic x64 installer, so that you can easily include New Relic in your Azure deployment.</summary>
     <releaseNotes>
-    </releaseNotes>
+
+Fixes
+
+* Improves running performance and memory consumption of the agent.
+* Fixes a bug where sometimes the first transaction after a cold start would be recorded resulting in a notable spike in response time graphs.</releaseNotes>
   </metadata>
   <files>
     <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
