@@ -26,7 +26,7 @@
 
 Fixes
 
-* Fixed a bug where status codes were not correctly being ignored when they should have been (for real this time).</releaseNotes>
+* Additional fixes for cases where status codes were not correctly being ignored when they should have been.</releaseNotes>
   </metadata>
   <files>
     <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
