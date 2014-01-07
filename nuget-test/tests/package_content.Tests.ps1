@@ -16,6 +16,7 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 
     Describe "package_content" {
 		$agentVersion = "2.19.3.0"
+		$serverMonitorVersion = "3.0.219.0"
 		
 		Context "When package exists" {
 			It "checks to see if content\newrelic.cmd exists" {
@@ -24,6 +25,10 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 			
 			It "checks to see if content\NewRelicAgent_x64_$agentVersion.msi exists" {
 				(Test-Path $PackageRoot\content\NewRelicAgent_x64_$agentVersion.msi) | Should Be $true
+			}
+
+			It "checks to see if content\NewRelicServerMonitor_x64_$serverMonitorVersion.msi exists" {
+				(Test-Path $PackageRoot\content\NewRelicServerMonitor_x64_$serverMonitorVersion.msi) | Should Be $true
 			}
 
 		}
@@ -39,13 +44,17 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 				$result = Get-Content $cmdfile | Select-String "NewRelicAgent_x64_$agentVersion.msi" -CaseSensitive -Quiet
 				($result -ne $null) | Should be $true
 			}
+			It "Should have the static value NewRelicServerMonitor_x64_$agentVersion.msi" {
+				$result = Get-Content $cmdfile | Select-String "NewRelicServerMonitor_x64_$serverMonitorVersion.msi" -CaseSensitive -Quiet
+				($result -ne $null) | Should be $true
+			}
 		}
 		
 		Context "When .nuspec file exists and has a metadata element" {
 			[xml] $nuspecXml = Get-Content $PackageRoot\*.nuspec
 			$node = $nuspecXml.package.metadata
 		
-			It "Should have id element with value NewRelic.Azure.WebSites" {
+			It "Should have id element with value NewRelicWindowsAzure" {
 				$node.id | Should be "NewRelicWindowsAzure"
 			}
 			
@@ -81,10 +90,15 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 				$result.src | Should be $result.target
 			}
 			
-			It "Should have file element for extension.xsd" {
+			It "Should have file element for NewRelicAgent_x64_$agentVersion.msi" {
 				$result = $nuspecXml.SelectSingleNode("//e:file[@src = 'content\NewRelicAgent_x64_$agentVersion.msi']", $ns)
 				$result.src | Should be $result.target
-			}		
+			}	
+
+			It "Should have file element for NewRelicServerMonitor_x64_$serverMonitorVersion.msi'" {
+				$result = $nuspecXml.SelectSingleNode("//e:file[@src = 'content\NewRelicServerMonitor_x64_$serverMonitorVersion.msi']", $ns)
+				$result.src | Should be $result.target
+			}	
 		
 			It "Should have file element for NewRelic.Api.Agent.dll" {
 				$result = $nuspecXml.SelectSingleNode("//e:file[@src = 'lib\NewRelic.Api.Agent.dll']", $ns)

@@ -64,9 +64,13 @@ function update_newrelic_cmd_file([System.__ComObject] $project, [System.String]
 }
 
 #Modify NewRelic.msi and NewRelic.cmd so that they will be copy always
-function update_newrelic_project_items([System.__ComObject] $project, [System.String]$msi){
-	$newrelicMsi = $project.ProjectItems.Item($msi)
-	$copyToOutputMsi = $newrelicMsi.Properties.Item("CopyToOutputDirectory")
+function update_newrelic_project_items([System.__ComObject] $project, [System.String]$agentMsi, [System.String]$serverMonitorMsi){
+	$newrelicAgentMsi = $project.ProjectItems.Item($agentMsi)
+	$copyToOutputMsi = $newrelicAgentMsi.Properties.Item("CopyToOutputDirectory")
+	$copyToOutputMsi.Value = 1
+
+	$newrelicServerMonitorMsi = $project.ProjectItems.Item($serverMonitorMsi)
+	$copyToOutputMsi = $newrelicServerMonitorMsi.Properties.Item("CopyToOutputDirectory")
 	$copyToOutputMsi.Value = 1
 
 	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
