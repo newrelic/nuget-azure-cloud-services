@@ -43,7 +43,13 @@ IF %ERRORLEVEL% EQU 0 (
 	REM copy /Y "CustomInstrumentation.xml" "%NR_HOME%\extensions" >> %RoleRoot%\nr.log
 
 	:: WEB ROLES : Restart the service to pick up the new environment variables
-	CALL:RESTART_IIS_AND_W3SVC
+	:: 	if we are in a Worker Role then there is no need to restart W3SVC _or_
+	:: 	if we are emulating locally then do not restart W3SVC
+	IF "%IsWorkerRole%" EQU "false" IF "%EMULATED%" EQU "false" (
+		ECHO Restarting IIS and W3SVC to pick up the new environment variables >> "%RoleRoot%\nr.log" 2>&1
+		IISRESET
+		NET START W3SVC
+	)
 
 	IF %ERRORLEVEL% EQU 0 (
 	  REM  The New Relic .net Agent installed ok and does not need to be installed again.
@@ -54,20 +60,6 @@ IF %ERRORLEVEL% EQU 0 (
 	  ECHO  An error occurred installing the New Relic .net Agent 1. Errorlevel = %ERRORLEVEL%. >> "%RoleRoot%\nr_error.log" 2>&1
 
 	  SET NR_ERROR_LEVEL=%ERRORLEVEL%
-	)
-
-GOTO:EOF
-
-:RESTART_IIS_AND_W3SVC
-
-	:: If we are in a Worker Role then there is no need to restart W3SVC
-	:: OR
-	:: If we are emulating locally then do not restart W3SVC
-	
-	IF "%IsWorkerRole%" EQU "false" IF "%EMULATED%" EQU "false" (
-		ECHO Restarting IIS and W3SVC to pick up the new environment variables >> "%RoleRoot%\nr.log" 2>&1
-		IISRESET
-		NET START W3SVC
 	)
 
 GOTO:EOF
