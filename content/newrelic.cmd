@@ -8,7 +8,10 @@ SET LICENSE_KEY=REPLACE_WITH_LICENSE_KEY
 
 SET NR_ERROR_LEVEL=0
 
+:: Comment out the line below if you do not want to install the New Relic Agent
 CALL:INSTALL_NEWRELIC_AGENT
+
+:: Comment out the line below if you do not want to install the New Relic Windows Server Monitor
 CALL:INSTALL_NEWRELIC_SERVER_MONITOR
 
 IF %NR_ERROR_LEVEL% EQU 0 (
