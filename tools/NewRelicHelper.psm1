@@ -353,7 +353,7 @@ function update_project_config([System.__ComObject] $project){
 	}
 }
 
-#Modify the service config - removing the Startup task to run the newrelic.cmd
+#Modify the service defintion - removing the Startup task to run the newrelic.cmd
 function cleanup_azure_service_definition([System.__ComObject] $project){
 	$svcConfigFiles = $DTE.Solution.Projects|Select-Object -Expand ProjectItems|Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	if($svcConfigFiles -eq $null){
@@ -416,7 +416,7 @@ function cleanup_azure_service_definition([System.__ComObject] $project){
     }
 }
 
-#Modify the service definition - removing the NewRelic.LicenseKey config setting
+#Modify the service configs - removing the NewRelic.LicenseKey config setting
 function cleanup_azure_service_configs([System.__ComObject] $project){
 	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -like 'ServiceConfiguration.*.cscfg'}
 	
