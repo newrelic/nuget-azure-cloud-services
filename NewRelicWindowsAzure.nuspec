@@ -31,7 +31,7 @@ Fixes
   <files>
     <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
     <file src="content\NewRelicAgent_x64_2.20.25.0.msi" target="content\NewRelicAgent_x64_2.20.25.0.msi" />
-    <file src="content\NewRelicServerMonitor_x64_3.0.219.0.msi" target="content\NewRelicServerMonitor_x64_3.0.219.0.msi" />
+    <file src="content\NewRelicServerMonitor_x64_3.0.224.0.msi" target="content\NewRelicServerMonitor_x64_3.0.224.0.msi" />
     <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
     <file src="tools\install.ps1" target="tools\install.ps1" />
     <file src="tools\NewRelicHelper.psm1" target="tools\NewRelicHelper.psm1" />
