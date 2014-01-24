@@ -15,8 +15,8 @@ $modulesPath = (Split-Path -parent $MyInvocation.MyCommand.Path).Replace("\tests
 Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 
     Describe "package_content" {
-		$agentVersion = "2.19.3.0"
-		$serverMonitorVersion = "3.0.219.0"
+		$agentVersion = "2.21.84.0"
+		$serverMonitorVersion = "3.0.224.0"
 		
 		Context "When package exists" {
 			It "checks to see if content\newrelic.cmd exists" {
