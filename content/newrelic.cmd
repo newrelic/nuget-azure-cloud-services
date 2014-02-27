@@ -80,6 +80,9 @@ GOTO:EOF
 	  REM  The New Relic Server Monitor installed ok and does not need to be installed again.
 	  ECHO New Relic Server Monitor was installed successfully. >> "%RoleRoot%\nr_server.log" 2>&1
 
+	  NET STOP "New Relic Server Monitor Service"
+	  NET START "New Relic Server Monitor Service"
+
 	) ELSE (
 	  REM   An error occurred. Log the error to a separate log and exit with the error code.
 	  ECHO  An error occurred installing the New Relic Server Monitor 1. Errorlevel = %ERRORLEVEL%. >> "%RoleRoot%\nr_server_error.log" 2>&1
