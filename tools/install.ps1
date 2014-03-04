@@ -8,9 +8,6 @@ $newRelicServerMonitorMsiFileName = "NewRelicServerMonitor_x64_3.0.224.0.msi"
 Write-Host "***Updating project items newrelic.cmd, $newRelicAgentMsiFileName, and $newRelicServerMonitorMsiFileName***"
 update_newrelic_project_items $project $newRelicAgentMsiFileName $newRelicServerMonitorMsiFileName
 
-#Write-Host "***Updating the Windows Azure ServiceDefinition.csdef with the newrelic.cmd Startup task***"
-#update_azure_service_config $project
-
 Write-Host "***Updating the Windows Azure ServiceDefinition.csdef with the newrelic.cmd Startup task***"
 update_azure_service_definition $project
 

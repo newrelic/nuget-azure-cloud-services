@@ -47,22 +47,6 @@ function create_dialog([System.String]$title, [System.String]$msg){
 	return $x
 }
 
-#Modify NewRelic.cmd
-<#function update_newrelic_cmd_file([System.__ComObject] $project, [System.String]$lookFor, [System.String]$replacement){
-	
-	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
-
-	if($replacement -ne $null -and $replacement.Length -gt 0){
-		$newrelicCmdFile = $newrelicCmd.Properties.Item("FullPath").Value
-		$fileContent =  Get-Content $newrelicCmdFile | Foreach-Object {$_ -replace $lookFor, $replacement}
-		Set-Content -Value $fileContent -Path $newrelicCmdFile
-	}
-	else{
-		Write-Host "No value was provided, please make sure to edit the newrelic.cmd file and replace $lookFor with a valid value"
-	}	
-
-}#>
-
 #Modify NewRelic.msi and NewRelic.cmd so that they will be copy always
 function update_newrelic_project_items([System.__ComObject] $project, [System.String]$agentMsi, [System.String]$serverMonitorMsi){
 	$newrelicAgentMsi = $project.ProjectItems.Item($agentMsi)
@@ -76,10 +60,6 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
 	$copyToOutputCmd = $newrelicCmd.Properties.Item("CopyToOutputDirectory")
 	$copyToOutputCmd.Value = 1
-	
-	#Modify NewRelic.cmd to accept the user's license key input 
-	#$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
-	#update_newrelic_cmd_file $project "REPLACE_WITH_LICENSE_KEY" $licenseKey
 }
 
 #Modify all ServiceConfiguration.*.cscfg to add New Relice license key
