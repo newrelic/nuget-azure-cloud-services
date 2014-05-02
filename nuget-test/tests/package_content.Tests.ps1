@@ -35,11 +35,7 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 
 		Context "When newrelic.cmd has not been applied to the application" {
 			$cmdfile = "$PackageRoot\content\newrelic.cmd"
-		
-			It "Should have the static value REPLACE_WITH_LICENSE_KEY" {
-				$result = Get-Content $cmdfile | Select-String "REPLACE_WITH_LICENSE_KEY" -CaseSensitive -Quiet
-				($result -ne $null) | Should be $true
-			}
+
 			It "Should have the static value NewRelicAgent_x64_$agentVersion.msi" {
 				$result = Get-Content $cmdfile | Select-String "NewRelicAgent_x64_$agentVersion.msi" -CaseSensitive -Quiet
 				($result -ne $null) | Should be $true
