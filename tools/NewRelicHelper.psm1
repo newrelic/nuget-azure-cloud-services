@@ -47,22 +47,6 @@ function create_dialog([System.String]$title, [System.String]$msg){
 	return $x
 }
 
-#Modify NewRelic.cmd
-function update_newrelic_cmd_file([System.__ComObject] $project, [System.String]$lookFor, [System.String]$replacement){
-	
-	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
-
-	if($replacement -ne $null -and $replacement.Length -gt 0){
-		$newrelicCmdFile = $newrelicCmd.Properties.Item("FullPath").Value
-		$fileContent =  Get-Content $newrelicCmdFile | Foreach-Object {$_ -replace $lookFor, $replacement}
-		Set-Content -Value $fileContent -Path $newrelicCmdFile
-	}
-	else{
-		Write-Host "No value was provided, please make sure to edit the newrelic.cmd file and replace $lookFor with a valid value"
-	}	
-
-}
-
 #Modify NewRelic.msi and NewRelic.cmd so that they will be copy always
 function update_newrelic_project_items([System.__ComObject] $project, [System.String]$agentMsi, [System.String]$serverMonitorMsi){
 	$newrelicAgentMsi = $project.ProjectItems.Item($agentMsi)
@@ -76,14 +60,75 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
 	$copyToOutputCmd = $newrelicCmd.Properties.Item("CopyToOutputDirectory")
 	$copyToOutputCmd.Value = 1
+}
+
+#Modify all ServiceConfiguration.*.cscfg to add New Relice license key
+function update_azure_service_configs([System.__ComObject] $project){
+	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -like 'ServiceConfiguration.*.cscfg'}
 	
-	#Modify NewRelic.cmd to accept the user's license key input 
-	$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
-	update_newrelic_cmd_file $project "REPLACE_WITH_LICENSE_KEY" $licenseKey
+	if($svcConfigFiles -eq $null){
+		Write-Host "Unable to find any ServiceConfiguration.cscfg files in your solution, please make sure your solution contains an Azure deployment project and try again."
+		return
+	}
+
+	$licenseKey = $null;
+
+	foreach ($svcConfigFile in $svcConfigFiles) {
+		$ServiceConfig = $svcConfigFile.Properties.Item("FullPath").Value
+		if(!(Test-Path $ServiceConfig)) {
+			Write-Host "Unable to locate the ServiceConfiguration.cscfg file on your filesystem.  Please verify that the ServiceConfiguration.cscfg in your solution points to a valid file and try again."
+			return
+		}
+
+		[xml] $xml = gc $ServiceConfig
+
+		$configSettingsNode = $xml.CreateElement('ConfigurationSettings','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration')
+		$settingNode = $xml.CreateElement('Setting','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration')
+
+		$settingNode.SetAttribute('name', 'NewRelic.LicenseKey')
+		$configSettingsNode.AppendChild($settingNode)
+
+		foreach($i in $xml.ServiceConfiguration.ChildNodes){
+			if($i.name -eq $project.Name.ToString()){
+				$modified = $i
+				break
+			}
+		}
+
+		$modifiedConfigSettings = $modified.ConfigurationSettings
+		if ($modifiedConfigSettings -eq $null){
+			# Moved dialog here because if the value already exists, no need to ask again
+			if ($licenseKey -eq $null) {
+				$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
+			}
+
+			$settingNode.SetAttribute('value', $licenseKey)
+			$modified.AppendChild($configSettingsNode)
+		}
+		else{
+			$nodeExists = $false
+			foreach ($i in $modifiedConfigSettings.Setting){
+				if ($i.name -eq "NewRelic.LicenseKey"){
+					$nodeExists = $true
+				}
+			}
+			if($NewRelicTask -eq $null -and !$nodeExists){
+				# Moved dialog here because if the value already exists, no need to ask again
+				if ($licenseKey -eq $null) {
+					$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
+				}
+
+				$settingNode.SetAttribute('value', $licenseKey)
+				$modifiedConfigSettings.AppendChild($settingNode)
+			}
+		}
+		
+		$xml.Save($ServiceConfig);
+	}
 }
 
 #Modify the service config - adding a new Startup task to run the newrelic.cmd
-function update_azure_service_config([System.__ComObject] $project){
+function update_azure_service_definition([System.__ComObject] $project){
 	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	
 	if($svcConfigFiles -eq $null){
@@ -136,6 +181,14 @@ function update_azure_service_config([System.__ComObject] $project){
         $variableIsWorkerRoleNode.SetAttribute('name','IsWorkerRole')
         $variableIsWorkerRoleNode.SetAttribute('value',$isWorkerRole)
         $environmentNode.AppendChild($variableIsWorkerRoleNode)
+        
+        #Generate the LICENSE_KEY variable
+        $licenseKeyVariableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $licenseKeyRoleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $licenseKeyRoleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name=''NewRelic.LicenseKey'']/@value')
+        $licenseKeyVariableNode.SetAttribute('name','LICENSE_KEY')
+        $licenseKeyVariableNode.AppendChild($licenseKeyRoleInstanceValueNode)
+        $environmentNode.AppendChild($licenseKeyVariableNode)
         
         $taskNode.AppendChild($environmentNode)
         $startupNode.AppendChild($taskNode)
@@ -191,6 +244,29 @@ function update_azure_service_config([System.__ComObject] $project){
         	$modifiedRuntime = $modified.Runtime
         	if($modifiedRuntime -eq $null){
         		$modified.PrependChild($runtimeNode)
+        	}
+        }
+        
+        #Add 'NewRelic.LicenseKey' to ConfigurationSettings
+        $configSettingsNode = $xml.CreateElement('ConfigurationSettings','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        $settingNode = $xml.CreateElement('Setting','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+        
+        $settingNode.SetAttribute('name', 'NewRelic.LicenseKey')
+        $configSettingsNode.AppendChild($settingNode)
+        
+        $modifiedConfigSettings = $modified.ConfigurationSettings
+        if ($modifiedConfigSettings -eq $null){
+        	$modified.AppendChild($configSettingsNode)
+        }
+        else{
+        	$nodeExists = $false
+        	foreach ($i in $modifiedConfigSettings.Setting){
+        		if ($i.name -eq "NewRelic.LicenseKey"){
+        			$nodeExists = $true
+        		}
+        	}
+        	if($NewRelicTask -eq $null -and !$nodeExists){
+        		$modifiedConfigSettings.AppendChild($settingNode)
         	}
         }
         
@@ -257,8 +333,8 @@ function update_project_config([System.__ComObject] $project){
 	}
 }
 
-#Modify the service config - removing the Startup task to run the newrelic.cmd
-function cleanup_azure_service_config([System.__ComObject] $project){
+#Modify the service defintion - removing the Startup task to run the newrelic.cmd
+function cleanup_azure_service_definition([System.__ComObject] $project){
 	$svcConfigFiles = $DTE.Solution.Projects|Select-Object -Expand ProjectItems|Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	if($svcConfigFiles -eq $null){
 		return
@@ -304,6 +380,56 @@ function cleanup_azure_service_config([System.__ComObject] $project){
         		$xml.Save($ServiceDefinitionConfig)
         	}
         }
+        
+        # Remove NewRelic.LicenseKey configuration setting from service definition
+        $configSettingsNode = $modified.ConfigurationSettings
+        if($configSettingsNode -ne $null -and $configSettingsNode.ChildNodes.Count -gt 0){
+        	$node = $configSettingsNode.Setting | where { $_.name -eq "NewRelic.LicenseKey" }
+        	if($node -ne $null){
+        		[Void]$node.ParentNode.RemoveChild($node)
+        		if($configSettingsNode.ChildNodes.Count -eq 0){
+        			[Void]$configSettingsNode.ParentNode.RemoveChild($configSettingsNode)
+        		}
+        		$xml.Save($ServiceDefinitionConfig)
+        	}
+        }
+    }
+}
+
+#Modify the service configs - removing the NewRelic.LicenseKey config setting
+function cleanup_azure_service_configs([System.__ComObject] $project){
+	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -like 'ServiceConfiguration.*.cscfg'}
+	
+	if($svcConfigFiles -eq $null){
+		return
+	}
+
+	foreach ($svcConfigFile in $svcConfigFiles) {
+		$ServiceConfig = $svcConfigFile.Properties.Item("FullPath").Value
+		if(!(Test-Path $ServiceConfig)) {
+			return
+		}
+
+		[xml] $xml = gc $ServiceConfig
+
+		foreach($i in $xml.ServiceConfiguration.ChildNodes){
+			if($i.name -eq $project.Name.ToString()){
+				$modified = $i
+				break
+			}
+		}
+
+		$configSettingsNode = $modified.ConfigurationSettings
+		if($configSettingsNode.ChildNodes.Count -gt 0){
+			$node = $configSettingsNode.Setting | where { $_.name -eq "NewRelic.LicenseKey" }
+			if($node -ne $null){
+				[Void]$node.ParentNode.RemoveChild($node)
+				if($configSettingsNode.ChildNodes.Count -eq 0){
+					[Void]$configSettingsNode.ParentNode.RemoveChild($configSettingsNode)
+				}
+				$xml.Save($ServiceConfig)
+			}
+		}
 	}
 }
 
