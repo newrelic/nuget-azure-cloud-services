@@ -24,7 +24,7 @@ IF %NR_ERROR_LEVEL% EQU 0 (
 	ECHO %ldt% : Begin installing the New Relic .net Agent >> "%RoleRoot%\nr.log" 2>&1
 
 	:: Current version of the installer
-	SET NR_INSTALLER_NAME=NewRelicAgent_x64_3.9.145.0.msi
+	SET NR_INSTALLER_NAME=NewRelicAgent_x64_3.10.43.0.msi
 	:: Path used for custom configuration and worker role environment varibles
 	SET NR_HOME=%ALLUSERSPROFILE%\New Relic\.NET Agent\
 
@@ -68,7 +68,7 @@ GOTO:EOF
 	ECHO %ldt% : Begin installing the New Relic Server Monitor >> "%RoleRoot%\nr_server.log" 2>&1
 
 	:: Current version of the installer
-	SET NR_INSTALLER_NAME=NewRelicServerMonitor_x64_3.3.0.0.msi
+	SET NR_INSTALLER_NAME=NewRelicServerMonitor_x64_3.3.1.0.msi
 
 	ECHO Installing the New Relic Server Monitor. >> "%RoleRoot%\nr_server.log" 2>&1
 	msiexec.exe /i %NR_INSTALLER_NAME% /norestart /quiet NR_LICENSE_KEY=%LICENSE_KEY% /lv* %RoleRoot%\nr_server_install.log
