@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>NewRelicWindowsAzure</id>
-    <version>4.0.143.0</version>
+    <version>4.0.146.0</version>
     <title>New Relic x64 for Windows Azure</title>
     <authors>Mike Cousins,Nick Floyd</authors>
     <licenseUrl>http://newrelic.com</licenseUrl>
@@ -26,7 +26,7 @@
   </metadata>
   <files>
     <file src="content\newrelic.cmd" target="content\newrelic.cmd" />
-    <file src="content\NewRelicAgent_x64_4.0.143.0.msi" target="content\NewRelicAgent_x64_4.0.143.0.msi" />
+    <file src="content\NewRelicAgent_x64_4.0.146.0.msi" target="content\NewRelicAgent_x64_4.0.146.0.msi" />
     <file src="content\NewRelicServerMonitor_x64_3.3.3.0.msi" target="content\NewRelicServerMonitor_x64_3.3.3.0.msi" />
     <file src="lib\NewRelic.Api.Agent.dll" target="lib\NewRelic.Api.Agent.dll" />
     <file src="tools\install.ps1" target="tools\install.ps1" />
