@@ -64,14 +64,16 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 
 #Modify all ServiceConfiguration.*.cscfg to add New Relice license key
 function update_azure_service_configs([System.__ComObject] $project){
+	
+	$pn = $project.Name.ToString()
+    $licenseKey = $null;
+	
 	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -like 'ServiceConfiguration.*.cscfg'}
 	
 	if($svcConfigFiles -eq $null){
 		Write-Host "Unable to find any ServiceConfiguration.cscfg files in your solution, please make sure your solution contains an Azure deployment project and try again."
 		return
 	}
-
-	$licenseKey = $null;
 
 	foreach ($svcConfigFile in $svcConfigFiles) {
 		$ServiceConfig = $svcConfigFile.Properties.Item("FullPath").Value
@@ -89,7 +91,7 @@ function update_azure_service_configs([System.__ComObject] $project){
 		$configSettingsNode.AppendChild($settingNode)
 
 		foreach($i in $xml.ServiceConfiguration.ChildNodes){
-			if($i.name -eq $project.Name.ToString()){
+			if($i.name -eq $pn){
                 $modified = $i
 				break
 			}
@@ -100,7 +102,7 @@ function update_azure_service_configs([System.__ComObject] $project){
         
             $ns = new-object Xml.XmlNamespaceManager $xml.NameTable
 			$ns.AddNamespace('dns', 'http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration')
-			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceConfiguration/dns:Role/dns:ConfigurationSettings", $ns) 
+			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceConfiguration/dns:Role[@name='$pn']/dns:ConfigurationSettings", $ns) 
 
     		if ($modifiedConfigSettings -eq $null){
     			# Moved dialog here because if the value already exists, no need to ask again
@@ -136,6 +138,9 @@ function update_azure_service_configs([System.__ComObject] $project){
 
 #Modify the service config - adding a new Startup task to run the newrelic.cmd
 function update_azure_service_definition([System.__ComObject] $project){
+	
+	$pn = $project.Name.ToString()
+	
 	$svcConfigFiles = $DTE.Solution.Projects | Select-Object -Expand ProjectItems | Where-Object{$_.Name -eq 'ServiceDefinition.csdef'}
 	
 	if($svcConfigFiles -eq $null){
@@ -173,7 +178,7 @@ function update_azure_service_definition([System.__ComObject] $project){
         $taskNode.SetAttribute('taskType','simple')
         
         foreach($i in $xml.ServiceDefinition.ChildNodes){
-        	if($i.name -eq $project.Name.ToString()){
+        	if($i.name -eq $pn){
 	            $modified = $i
         		if($modified.LocalName -eq 'WorkerRole'){
         		    $isWorkerRole = 'true'
@@ -268,7 +273,7 @@ function update_azure_service_definition([System.__ComObject] $project){
             
             $ns = new-object Xml.XmlNamespaceManager $xml.NameTable
 			$ns.AddNamespace('dns', 'http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceDefinition/dns:$role/dns:ConfigurationSettings", $ns) 
+			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceDefinition/dns:$role[@name='$pn']/dns:ConfigurationSettings", $ns) 
 
             if ($modifiedConfigSettings -eq $null){
             	$modified.AppendChild($configSettingsNode)
