@@ -90,40 +90,47 @@ function update_azure_service_configs([System.__ComObject] $project){
 
 		foreach($i in $xml.ServiceConfiguration.ChildNodes){
 			if($i.name -eq $project.Name.ToString()){
-				$modified = $i
+                $modified = $i
 				break
 			}
 		}
-
-		$modifiedConfigSettings = $modified.ConfigurationSettings
-		if ($modifiedConfigSettings -eq $null){
-			# Moved dialog here because if the value already exists, no need to ask again
-			if ($licenseKey -eq $null) {
-				$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
-			}
-
-			$settingNode.SetAttribute('value', $licenseKey)
-			$modified.AppendChild($configSettingsNode)
-		}
-		else{
-			$nodeExists = $false
-			foreach ($i in $modifiedConfigSettings.Setting){
-				if ($i.name -eq "NewRelic.LicenseKey"){
-					$nodeExists = $true
-				}
-			}
-			if($NewRelicTask -eq $null -and !$nodeExists){
-				# Moved dialog here because if the value already exists, no need to ask again
-				if ($licenseKey -eq $null) {
-					$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
-				}
-
-				$settingNode.SetAttribute('value', $licenseKey)
-				$modifiedConfigSettings.AppendChild($settingNode)
-			}
-		}
 		
-		$xml.Save($ServiceConfig);
+		#Make sure a matching app was found
+        if($modified -ne $null){
+        
+            $ns = new-object Xml.XmlNamespaceManager $xml.NameTable
+			$ns.AddNamespace('dns', 'http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration')
+			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceConfiguration/dns:Role/dns:ConfigurationSettings", $ns) 
+
+    		if ($modifiedConfigSettings -eq $null){
+    			# Moved dialog here because if the value already exists, no need to ask again
+    			if ($licenseKey -eq $null) {
+    				$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
+    			}
+    
+    			$settingNode.SetAttribute('value', $licenseKey)
+    			$modified.AppendChild($configSettingsNode)
+    		}
+    		else{
+    			$nodeExists = $false
+    			foreach ($i in $modifiedConfigSettings.Setting){
+    				if ($i.name -eq "NewRelic.LicenseKey"){
+    					$nodeExists = $true
+    				}
+    			}
+    			if($NewRelicTask -eq $null -and !$nodeExists){
+    				# Moved dialog here because if the value already exists, no need to ask again
+    				if ($licenseKey -eq $null) {
+    					$licenseKey = create_dialog "License Key" "Please enter your New Relic LICENSE KEY"
+    				}
+    
+    				$settingNode.SetAttribute('value', $licenseKey)
+    				$modifiedConfigSettings.AppendChild($settingNode)
+    			}
+    		}
+    		
+    		$xml.Save($ServiceConfig);
+		}
 	}
 }
 
@@ -146,7 +153,8 @@ function update_azure_service_definition([System.__ComObject] $project){
 		[xml] $xml = gc $ServiceDefinitionConfig
 
 		$isWorkerRole = 'false'
-
+        $role = "WebRole"
+        
         #Create startup and newrelic task nodes
         $startupNode = $xml.CreateElement('Startup','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
         $taskNode = $xml.CreateElement('Task','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
@@ -166,7 +174,7 @@ function update_azure_service_definition([System.__ComObject] $project){
         
         foreach($i in $xml.ServiceDefinition.ChildNodes){
         	if($i.name -eq $project.Name.ToString()){
-        		$modified = $i
+	            $modified = $i
         		if($modified.LocalName -eq 'WorkerRole'){
         		    $isWorkerRole = 'true'
         		    Write-Host "Azure Worker Role projects have no default concept of Web transactions or HTTP context so you'll need to use the Agent API (added as a reference to your project as part of this package) for your custom instrumentation needs."
@@ -176,101 +184,109 @@ function update_azure_service_definition([System.__ComObject] $project){
         	}
         }
         
-        #Generate the variable for the startup task that will be used to check to see if we need to issue a restart on the W3SVC 
-        $variableIsWorkerRoleNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        $variableIsWorkerRoleNode.SetAttribute('name','IsWorkerRole')
-        $variableIsWorkerRoleNode.SetAttribute('value',$isWorkerRole)
-        $environmentNode.AppendChild($variableIsWorkerRoleNode)
-        
-        #Generate the LICENSE_KEY variable
-        $licenseKeyVariableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        $licenseKeyRoleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        $licenseKeyRoleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name=''NewRelic.LicenseKey'']/@value')
-        $licenseKeyVariableNode.SetAttribute('name','LICENSE_KEY')
-        $licenseKeyVariableNode.AppendChild($licenseKeyRoleInstanceValueNode)
-        $environmentNode.AppendChild($licenseKeyVariableNode)
-        
-        $taskNode.AppendChild($environmentNode)
-        $startupNode.AppendChild($taskNode)
-        
-        $modifiedStartUp = $modified.StartUp
-        if($modifiedStartUp -eq $null){
-        	$modified.PrependChild($startupNode)
-        }
-        else{
-        	$nodeExists = $false
-        	foreach ($i in $modifiedStartUp.Task){
-        		if ($i.commandLine -eq "newrelic.cmd"){
-        			$nodeExists = $true
-        		}
-        	}
-        	if($NewRelicTask -eq $null -and !$nodeExists){
-        		$modifiedStartUp.AppendChild($taskNode)
-        	}
-        }
-        
-        if($modified -ne $null -and $isWorkerRole -eq 'true'){
-        
-        	#Generate the environment variables for worker role instrumentation
-        	$runtimeNode = $xml.CreateElement('Runtime','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	$runtimeEnvironmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	
-        	#Enables profiling for all CLR based applications
-        	$variableCEPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	$variableCEPNode.SetAttribute('name','COR_ENABLE_PROFILING')
-        	$variableCEPNode.SetAttribute('value','1')
-        	
-        	#Profiler guid associated with the New Relic .NET profiler
-        	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	$variableCPNode.SetAttribute('name','COR_PROFILER')
-        	$variableCPNode.SetAttribute('value','{71DA0A04-7777-4EC6-9643-7D28B46A8A41}')
-        	
-        	#Helps Azure Workers find the newrelic.config
-        	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	$variableNHNode.SetAttribute('name','NEWRELIC_HOME')
-            $variableNHNode.SetAttribute('value','D:\ProgramData\New Relic\.NET Agent\')
+        #Make sure a matching app was found
+        if($modified -ne $null){
+            #Generate the variable for the startup task that will be used to check to see if we need to issue a restart on the W3SVC 
+            $variableIsWorkerRoleNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            $variableIsWorkerRoleNode.SetAttribute('name','IsWorkerRole')
+            $variableIsWorkerRoleNode.SetAttribute('value',$isWorkerRole)
+            $environmentNode.AppendChild($variableIsWorkerRoleNode)
             
-            #Helps Azure Workers find the NewRelic.Agent.Core.dll
-        	$variableNIPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        	$variableNIPNode.SetAttribute('name','NEWRELIC_INSTALL_PATH')
-            $variableNIPNode.SetAttribute('value','D:\Program Files\New Relic\.NET Agent\')
+            #Generate the LICENSE_KEY variable
+            $licenseKeyVariableNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            $licenseKeyRoleInstanceValueNode = $xml.CreateElement('RoleInstanceValue','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            $licenseKeyRoleInstanceValueNode.SetAttribute('xpath','/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name=''NewRelic.LicenseKey'']/@value')
+            $licenseKeyVariableNode.SetAttribute('name','LICENSE_KEY')
+            $licenseKeyVariableNode.AppendChild($licenseKeyRoleInstanceValueNode)
+            $environmentNode.AppendChild($licenseKeyVariableNode)
             
-        	$runtimeEnvironmentNode.AppendChild($variableCEPNode)
-        	$runtimeEnvironmentNode.AppendChild($variableCPNode)
-        	$runtimeEnvironmentNode.AppendChild($variableNHNode)
-        	$runtimeEnvironmentNode.AppendChild($variableNIPNode)
-        	$runtimeNode.AppendChild($runtimeEnvironmentNode)
+            $taskNode.AppendChild($environmentNode)
+            $startupNode.AppendChild($taskNode)
         
-        	$modifiedRuntime = $modified.Runtime
-        	if($modifiedRuntime -eq $null){
-        		$modified.PrependChild($runtimeNode)
-        	}
-        }
-        
-        #Add 'NewRelic.LicenseKey' to ConfigurationSettings
-        $configSettingsNode = $xml.CreateElement('ConfigurationSettings','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        $settingNode = $xml.CreateElement('Setting','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
-        
-        $settingNode.SetAttribute('name', 'NewRelic.LicenseKey')
-        $configSettingsNode.AppendChild($settingNode)
-        
-        $modifiedConfigSettings = $modified.ConfigurationSettings
-        if ($modifiedConfigSettings -eq $null){
-        	$modified.AppendChild($configSettingsNode)
-        }
-        else{
-        	$nodeExists = $false
-        	foreach ($i in $modifiedConfigSettings.Setting){
-        		if ($i.name -eq "NewRelic.LicenseKey"){
-        			$nodeExists = $true
-        		}
-        	}
-        	if($NewRelicTask -eq $null -and !$nodeExists){
-        		$modifiedConfigSettings.AppendChild($settingNode)
-        	}
-        }
-        
-		$xml.Save($ServiceDefinitionConfig);
+            $modifiedStartUp = $modified.StartUp
+            if($modifiedStartUp -eq $null){
+            	$modified.PrependChild($startupNode)
+            }
+            else{
+            	$nodeExists = $false
+            	foreach ($i in $modifiedStartUp.Task){
+            		if ($i.commandLine -eq "newrelic.cmd"){
+            			$nodeExists = $true
+            		}
+            	}
+            	if($NewRelicTask -eq $null -and !$nodeExists){
+            		$modifiedStartUp.AppendChild($taskNode)
+            	}
+            }
+            
+            if($isWorkerRole -eq 'true'){
+            
+                $role = "WorkerRole"    
+                
+            	#Generate the environment variables for worker role instrumentation
+            	$runtimeNode = $xml.CreateElement('Runtime','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	$runtimeEnvironmentNode = $xml.CreateElement('Environment','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	
+            	#Enables profiling for all CLR based applications
+            	$variableCEPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	$variableCEPNode.SetAttribute('name','COR_ENABLE_PROFILING')
+            	$variableCEPNode.SetAttribute('value','1')
+            	
+            	#Profiler guid associated with the New Relic .NET profiler
+            	$variableCPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	$variableCPNode.SetAttribute('name','COR_PROFILER')
+            	$variableCPNode.SetAttribute('value','{71DA0A04-7777-4EC6-9643-7D28B46A8A41}')
+            	
+            	#Helps Azure Workers find the newrelic.config
+            	$variableNHNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	$variableNHNode.SetAttribute('name','NEWRELIC_HOME')
+                $variableNHNode.SetAttribute('value','D:\ProgramData\New Relic\.NET Agent\')
+                
+                #Helps Azure Workers find the NewRelic.Agent.Core.dll
+            	$variableNIPNode = $xml.CreateElement('Variable','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            	$variableNIPNode.SetAttribute('name','NEWRELIC_INSTALL_PATH')
+                $variableNIPNode.SetAttribute('value','D:\Program Files\New Relic\.NET Agent\')
+                
+            	$runtimeEnvironmentNode.AppendChild($variableCEPNode)
+            	$runtimeEnvironmentNode.AppendChild($variableCPNode)
+            	$runtimeEnvironmentNode.AppendChild($variableNHNode)
+            	$runtimeEnvironmentNode.AppendChild($variableNIPNode)
+            	$runtimeNode.AppendChild($runtimeEnvironmentNode)
+            
+            	$modifiedRuntime = $modified.Runtime
+            	if($modifiedRuntime -eq $null){
+            		$modified.PrependChild($runtimeNode)
+            	}
+            }
+            
+            #Add 'NewRelic.LicenseKey' to ConfigurationSettings
+            $configSettingsNode = $xml.CreateElement('ConfigurationSettings','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            $settingNode = $xml.CreateElement('Setting','http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+            
+            $settingNode.SetAttribute('name', 'NewRelic.LicenseKey')
+            $configSettingsNode.AppendChild($settingNode)
+            
+            $ns = new-object Xml.XmlNamespaceManager $xml.NameTable
+			$ns.AddNamespace('dns', 'http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition')
+			$modifiedConfigSettings = $modified.SelectSingleNode("/dns:ServiceDefinition/dns:$role/dns:ConfigurationSettings", $ns) 
+
+            if ($modifiedConfigSettings -eq $null){
+            	$modified.AppendChild($configSettingsNode)
+            }
+            else{
+            	$nodeExists = $false
+            	foreach ($i in $modifiedConfigSettings.Setting){
+            		if ($i.name -eq "NewRelic.LicenseKey"){
+            			$nodeExists = $true
+            		}
+            	}
+            	if($NewRelicTask -eq $null -and !$nodeExists){
+            		$modifiedConfigSettings.AppendChild($settingNode)
+            	}
+            }
+            
+    		$xml.Save($ServiceDefinitionConfig);
+		}
 	}
 }
 
