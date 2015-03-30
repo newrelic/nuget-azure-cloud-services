@@ -62,8 +62,8 @@ Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 				$node.title | Should be "New Relic x64 for Windows Azure"
 			}
 			
-			It "Should have projectUrl element with value http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget" {
-				$node.projectUrl | Should be "http://www.mikecousins.com/new-relic-windows-azure-package-for-nuget"
+			It "Should have projectUrl element with value https://github.com/newrelic/nuget-azure-cloud-services" {
+				$node.projectUrl | Should be "https://github.com/newrelic/nuget-azure-cloud-services"
 			}
 			
 			It "Should have iconUrl element with value http://newrelic.com/images/avatar-newrelic.png" {
