@@ -15,7 +15,7 @@ $modulesPath = (Split-Path -parent $MyInvocation.MyCommand.Path).Replace("\tests
 Import-Module (Join-Path $modulesPath global_config.psm1) -Force
 
     Describe "package_content" {
-		$agentVersion = "4.6.26.0"
+		$agentVersion = "4.6.29.0"
 		$serverMonitorVersion = "3.3.3.0"
 		
 		Context "When package exists" {
