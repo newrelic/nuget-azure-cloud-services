@@ -60,6 +60,14 @@ function update_newrelic_project_items([System.__ComObject] $project, [System.St
 	$newrelicCmd = $project.ProjectItems.Item("newrelic.cmd")
 	$copyToOutputCmd = $newrelicCmd.Properties.Item("CopyToOutputDirectory")
 	$copyToOutputCmd.Value = 1
+    
+    $bootstrapCmd = $project.ProjectItems.Item("bootstrap.bat")
+	$copyToOutputCmd = $newrelicCmd.Properties.Item("CopyToOutputDirectory")
+	$copyToOutputCmd.Value = 1
+
+    $installPS = $project.ProjectItems.Item("install.ps1")
+	$copyToOutputCmd = $newrelicCmd.Properties.Item("CopyToOutputDirectory")
+	$copyToOutputCmd.Value = 1
 }
 
 #Modify all ServiceConfiguration.*.cscfg to add New Relice license key
@@ -173,7 +181,7 @@ function update_azure_service_definition([System.__ComObject] $project){
         $variableNode.AppendChild($roleInstanceValueNode)
         $environmentNode.AppendChild($variableNode)
         
-        $taskNode.SetAttribute('commandLine','newrelic.cmd')
+        $taskNode.SetAttribute('commandLine','bootstrap.bat')
         $taskNode.SetAttribute('executionContext','elevated')
         $taskNode.SetAttribute('taskType','simple')
         
@@ -215,7 +223,7 @@ function update_azure_service_definition([System.__ComObject] $project){
             else{
             	$nodeExists = $false
             	foreach ($i in $modifiedStartUp.Task){
-            		if ($i.commandLine -eq "newrelic.cmd"){
+            		if ($i.commandLine -eq "bootstrap.bat"){
             			$nodeExists = $true
             		}
             	}
@@ -378,7 +386,7 @@ function cleanup_azure_service_definition([System.__ComObject] $project){
 
 		$startupnode = $modified.Startup
 		if($startupnode.ChildNodes.Count -gt 0){
-			$node = $startupnode.Task | where { $_.commandLine -eq "newrelic.cmd" }
+			$node = $startupnode.Task | where { $_.commandLine -eq "bootstrap.bat" }
 			if($node -ne $null){
 				[Void]$node.ParentNode.RemoveChild($node)
 				if($startupnode.ChildNodes.Count -eq 0){
@@ -479,7 +487,7 @@ function cleanup_project_config([System.__ComObject] $project){
 	
 	# manually remove newrelic.cmd since the Nuget uninstaller won't due to it being "modified"
 	Try{
-		$scripts = $project.ProjectItems | Where-Object { $_.Name -eq "newrelic.cmd" }
+		$scripts = $project.ProjectItems | Where-Object { $_.Name -eq "bootstrap.bat" }
 
 		if ($scripts) {
 			$scripts.ProjectItems | ForEach-Object { $_.Delete() }
