@@ -1,5 +1,8 @@
 SETLOCAL EnableExtensions
 
+:: Bypass installing the agent and server monitor if locally emulating
+IF "%EMULATED%" EQU "true" GOTO:EOF
+
 for /F "usebackq tokens=1,2 delims==" %%i in (`wmic os get LocalDateTime /VALUE 2^>NUL`) do if '.%%i.'=='.LocalDateTime.' set ldt=%%j
 set ldt=%ldt:~0,4%-%ldt:~4,2%-%ldt:~6,2% %ldt:~8,2%:%ldt:~10,2%:%ldt:~12,6%
 
@@ -36,7 +39,7 @@ IF %NR_ERROR_LEVEL% EQU 0 (
 	:: WEB ROLES : Restart the service to pick up the new environment variables
 	:: 	if we are in a Worker Role then there is no need to restart W3SVC _or_
 	:: 	if we are emulating locally then do not restart W3SVC
-	IF "%IsWorkerRole%" EQU "false" IF "%EMULATED%" EQU "false" (
+	IF "%IsWorkerRole%" EQU "false" (
 		ECHO Restarting IIS and W3SVC to pick up the new environment variables >> "%RoleRoot%\nr.log" 2>&1
 		IISRESET
 		NET START W3SVC
