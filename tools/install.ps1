@@ -2,7 +2,7 @@ param($installPath, $toolsPath, $package, $project)
 
 Import-Module (Join-Path $toolsPath NewRelicHelper.psm1)
 
-$newRelicAgentMsiFileName = "NewRelicAgent_x64_6.9.62.0.msi"
+$newRelicAgentMsiFileName = "NewRelicAgent_x64_6.10.1.0.msi"
 $newRelicServerMonitorMsiFileName = "NewRelicServerMonitor_x64_3.3.6.0.msi"
 
 Write-Host "***Updating project items newrelic.cmd, $newRelicAgentMsiFileName, and $newRelicServerMonitorMsiFileName***"
